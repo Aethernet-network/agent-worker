@@ -119,7 +119,7 @@ def run(client, claude):
                     continue
 
                 try:
-                    tasks = client.list_tasks(status="open", category=category)
+                    tasks = client.browse_tasks(status="open", category=category)
                 except Exception:
                     tasks = []
 
