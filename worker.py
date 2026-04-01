@@ -19,7 +19,7 @@ import traceback
 import anthropic
 
 from aethernet.signing import get_or_create_keypair
-from aethernet.client import AetherNetClient
+from aethernet.client import AetherNetClient, Evidence
 
 
 # ── Configuration ────────────────────────────────────────────────────────────
@@ -92,15 +92,21 @@ Respond with your complete work product."""
     output = response.content[0].text
     tokens = response.usage.output_tokens
 
-    evidence = {
-        "model": MODEL,
-        "methodology": f"Direct LLM completion with structured prompt ({task.get('category', 'general')} category)",
-        "output_tokens": tokens,
-        "execution_time_ms": elapsed_ms,
-        "input_tokens": response.usage.input_tokens,
-    }
+    summary = f"Completed {task.get('category', 'general')} task using {MODEL} ({tokens} tokens, {elapsed_ms}ms)"
 
-    return output, evidence
+    evidence = Evidence(
+        output=output,
+        output_type="text",
+        summary=summary,
+        metrics={
+            "model": MODEL,
+            "output_tokens": str(tokens),
+            "input_tokens": str(response.usage.input_tokens),
+            "execution_time_ms": str(elapsed_ms),
+        },
+    )
+
+    return output, evidence, summary
 
 
 # ── Main Loop ────────────────────────────────────────────────────────────────
@@ -142,8 +148,8 @@ def run(client, claude):
 
                     # Do the work
                     try:
-                        output, evidence = do_work(claude, task)
-                        print(f"[WORKED]  {len(output)} chars, {evidence['output_tokens']} tokens, {evidence['execution_time_ms']}ms")
+                        output, evidence, summary = do_work(claude, task)
+                        print(f"[WORKED]  {len(output)} chars — {summary}")
                     except Exception as e:
                         print(f"[ERROR]   Work failed: {e}")
                         continue
@@ -152,8 +158,6 @@ def run(client, claude):
                     try:
                         client.submit_task_result(
                             task_id,
-                            result_hash=f"sha256:{hash(output) & 0xFFFFFFFFFFFFFFFF:016x}",
-                            result_note=output[:200],
                             result_content=output,
                             evidence=evidence,
                         )
