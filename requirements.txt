@@ -1,0 +1,2 @@
+aethernet-sdk>=0.2.0
+anthropic>=0.25.0
