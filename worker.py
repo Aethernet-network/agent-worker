@@ -125,7 +125,12 @@ def run(client, claude):
                     continue
 
                 try:
-                    tasks = client.browse_tasks(status="open", category=category)
+                    resp = client.session.get(client.node_url + "/v1/tasks")
+                    resp.raise_for_status()
+                    all_tasks = resp.json()
+                    tasks = [t for t in all_tasks
+                             if t.get("status") == "open"
+                             and t.get("category") == category]
                 except Exception:
                     tasks = []
 
